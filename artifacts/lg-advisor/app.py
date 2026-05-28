@@ -1091,20 +1091,17 @@ def show_result_card(p: dict, rank: int, fit: float, ans: dict, applied_tier):
             is_light  = hex_bg.upper() in ("#F5F5F5","#FAFAFA","#FDF8EF","#E8E8E8","#FFFFFF","#FFF")
             dot_border = "rgba(0,0,0,0.18)" if is_light else "rgba(0,0,0,0.08)"
             active_cls = "active" if idx == 0 else ""
-            v_code  = (v.get("code")     or "").replace("'", "\\'")
-            v_mat   = (v.get("material") or "").replace("'", "\\'")
-            v_price = int(v.get("price") or 0)
+            v_code      = v.get("code")     or ""
+            v_mat       = v.get("material") or ""
+            v_price     = int(v.get("price") or 0)
             v_price_fmt = f"{v_price:,}원" if v_price else ""
-            onclick = (
-                f"document.getElementById('{ccode_id}').textContent='{v_code}';"
-                f"document.getElementById('{cprc_id}').textContent='{v_price_fmt}';"
-                f"document.getElementById('{cmat_id}').textContent='{v_mat}';"
-                f"this.closest('.cs-chips').querySelectorAll('.cs-chip')"
-                f".forEach(function(c){{c.classList.remove('active')}});"
-                f"this.classList.add('active');"
-            )
+            # onclick 대신 data-* 속성 → SWATCH_JS가 이벤트 리스너 부착
             chip_items += (
-                f'<button class="cs-chip {active_cls}" onclick="{onclick}">'
+                f'<button class="cs-chip {active_cls}"'
+                f' data-rank="{rank}"'
+                f' data-code="{v_code}"'
+                f' data-price="{v_price_fmt}"'
+                f' data-mat="{v_mat}">'
                 f'<span class="cs-dot" style="background:{hex_bg};border:1px solid {dot_border};"></span>'
                 f'{cname}</button>'
             )
@@ -1415,6 +1412,50 @@ if q != "result" and ans:
             reset()
             st.rerun()
 
+# ── 색상 스와치 JS (components.html → iframe → window.parent.document 접근) ──
+# React는 onclick="string" 을 거부하므로, data-* 속성에 값을 담고
+# 이 iframe에서 addEventListener로 이벤트를 직접 부착
+SWATCH_JS = """
+<script>
+(function() {
+  var doc = window.parent.document;
+
+  function attachSwatches() {
+    doc.querySelectorAll('.cs-chip[data-rank]').forEach(function(chip) {
+      if (chip._lgSwatch) return;
+      chip._lgSwatch = true;
+      chip.addEventListener('click', function() {
+        var rank  = chip.dataset.rank;
+        var code  = chip.dataset.code  || '';
+        var price = chip.dataset.price || '';
+        var mat   = chip.dataset.mat   || '';
+
+        var codeEl  = doc.getElementById('card-code-'  + rank);
+        var priceEl = doc.getElementById('card-price-' + rank);
+        var matEl   = doc.getElementById('card-mat-'   + rank);
+        if (codeEl)  codeEl.textContent  = code;
+        if (priceEl) priceEl.textContent = price;
+        if (matEl)   matEl.textContent   = mat;
+
+        var siblings = chip.closest('.cs-chips');
+        if (siblings) {
+          siblings.querySelectorAll('.cs-chip').forEach(function(c) {
+            c.classList.remove('active');
+          });
+        }
+        chip.classList.add('active');
+      });
+    });
+  }
+
+  attachSwatches();
+  var obs = new MutationObserver(attachSwatches);
+  obs.observe(doc.body, { childList: true, subtree: true });
+})();
+</script>
+"""
+
 # ── 아이콘 JS 주입 (components.html → iframe → window.parent.document 접근) ──
 # height=0 으로 invisible iframe, 실제 DOM 조작은 부모 프레임에서 수행
 components.html(ICON_JS, height=0)
+components.html(SWATCH_JS, height=0)
