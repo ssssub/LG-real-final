@@ -1419,38 +1419,39 @@ SWATCH_JS = """
 <script>
 (function() {
   var doc = window.parent.document;
+  /* 부모 document 의 <head> 에 스크립트를 직접 주입 (ICON_JS 의 스타일 주입과 동일 패턴).
+     주입된 스크립트는 부모 문서에 영구적으로 살아있어 Streamlit 리렌더 후에도 동작. */
+  if (doc.getElementById('lg-swatch-handler')) return;
 
-  function attachSwatches() {
-    doc.querySelectorAll('.cs-chip[data-rank]').forEach(function(chip) {
-      if (chip._lgSwatch) return;
-      chip._lgSwatch = true;
-      chip.addEventListener('click', function() {
-        var rank  = chip.dataset.rank;
-        var code  = chip.dataset.code  || '';
-        var price = chip.dataset.price || '';
-        var mat   = chip.dataset.mat   || '';
+  var code = [
+    '(function(){',
+    '  function bind(){',
+    '    document.querySelectorAll(".cs-chip[data-rank]:not([data-sw])").forEach(function(c){',
+    '      c.setAttribute("data-sw","1");',
+    '      c.addEventListener("click",function(){',
+    '        var r=c.dataset.rank;',
+    '        var ce=document.getElementById("card-code-"+r);',
+    '        var pe=document.getElementById("card-price-"+r);',
+    '        var me=document.getElementById("card-mat-"+r);',
+    '        if(ce) ce.textContent=c.dataset.code||"";',
+    '        if(pe) pe.textContent=c.dataset.price||"";',
+    '        if(me) me.textContent=c.dataset.mat||"";',
+    '        var row=c.closest(".cs-chips");',
+    '        if(row) row.querySelectorAll(".cs-chip").forEach(function(x){x.classList.remove("active");});',
+    '        c.classList.add("active");',
+    '      });',
+    '    });',
+    '  }',
+    '  bind();',
+    '  new MutationObserver(bind).observe(document.body,{childList:true,subtree:true});',
+    '  setInterval(bind,400);',
+    '})();'
+  ].join('\\n');
 
-        var codeEl  = doc.getElementById('card-code-'  + rank);
-        var priceEl = doc.getElementById('card-price-' + rank);
-        var matEl   = doc.getElementById('card-mat-'   + rank);
-        if (codeEl)  codeEl.textContent  = code;
-        if (priceEl) priceEl.textContent = price;
-        if (matEl)   matEl.textContent   = mat;
-
-        var siblings = chip.closest('.cs-chips');
-        if (siblings) {
-          siblings.querySelectorAll('.cs-chip').forEach(function(c) {
-            c.classList.remove('active');
-          });
-        }
-        chip.classList.add('active');
-      });
-    });
-  }
-
-  attachSwatches();
-  var obs = new MutationObserver(attachSwatches);
-  obs.observe(doc.body, { childList: true, subtree: true });
+  var s = doc.createElement('script');
+  s.id = 'lg-swatch-handler';
+  s.textContent = code;
+  doc.head.appendChild(s);
 })();
 </script>
 """
