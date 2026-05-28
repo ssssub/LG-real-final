@@ -460,6 +460,50 @@ div[data-testid="stCheckbox"] label span {{
   flex-shrink: 0;
 }}
 
+/* ── 스펙 드롭다운 ── */
+.spec-sel-section {{
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid #F0F0F0;
+  display: flex;
+  gap: 10px;
+}}
+.spec-sel-wrap {{
+  flex: 1;
+  min-width: 0;
+}}
+.spec-sel-label {{
+  font-size: 0.67rem;
+  font-weight: 700;
+  color: #BBB;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  margin-bottom: 5px;
+}}
+.spec-sel {{
+  width: 100%;
+  padding: 7px 28px 7px 10px;
+  border: 1.5px solid #E8E8E8;
+  border-radius: 8px;
+  font-size: 0.78rem;
+  font-family: 'Pretendard', 'Apple SD Gothic Neo', sans-serif;
+  color: #333;
+  background: #FAFAFA;
+  cursor: pointer;
+  appearance: none;
+  -webkit-appearance: none;
+  background-image: url("data:image/svg+xml;charset=utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%23AAAAAA' stroke-width='1.5' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 9px center;
+  background-size: 10px;
+  transition: border-color 0.15s;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}}
+.spec-sel:hover {{ border-color: #A50034; }}
+.spec-sel:focus {{ outline: none; border-color: #A50034; }}
+
 /* ── 애니메이션 ── */
 @keyframes lgFadeUp {{
   from {{ opacity: 0; transform: translateY(10px); }}
@@ -827,6 +871,36 @@ def show_result_card(p: dict, rank: int, fit: float, ans: dict, applied_tier):
       {bar_rows_html}
     </div>"""
 
+    # 스펙 선택 드롭다운 HTML
+    def _opts(vals):
+        return "".join(f'<option>{v}</option>' for v in vals)
+
+    colors_sel = p.get("colors") or []
+    mats_sel   = p.get("materials") or [p.get("material", "-")]
+    codes_sel  = p.get("model_codes") or [p.get("code", "-")]
+
+    sel_html = f"""
+    <div class="spec-sel-section">
+      <div class="spec-sel-wrap">
+        <div class="spec-sel-label">색상</div>
+        <select class="spec-sel">
+          {_opts(colors_sel) if colors_sel else '<option>-</option>'}
+        </select>
+      </div>
+      <div class="spec-sel-wrap">
+        <div class="spec-sel-label">도어 재질</div>
+        <select class="spec-sel">
+          {_opts(mats_sel)}
+        </select>
+      </div>
+      <div class="spec-sel-wrap">
+        <div class="spec-sel-label">모델 코드</div>
+        <select class="spec-sel">
+          {_opts(codes_sel)}
+        </select>
+      </div>
+    </div>"""
+
     st.markdown(f"""
     <div class="{card_cls}">
       <div class="res-fit-row">
@@ -844,10 +918,11 @@ def show_result_card(p: dict, rank: int, fit: float, ans: dict, applied_tier):
       </div>
       <div class="res-name">{p['name']}</div>
       <div class="res-spec">{p['code']} &nbsp;·&nbsp; {p['install']} &nbsp;·&nbsp;
-        {p['doors']} &nbsp;·&nbsp; 총 {p['total_l']}L &nbsp;·&nbsp; 에너지 {p['energy']}등급</div>
+        {p['doors']} &nbsp;·&nbsp; 총 {p['total_l']}L &nbsp;·&nbsp; 에너지 {p['energy']}등급
+        &nbsp;·&nbsp; {p['size_raw']}</div>
       <div class="res-price">{price_str}</div>
       <div class="res-chips">{chips_html}</div>
-      <div class="res-color">색상: {color_str}&nbsp;&nbsp;|&nbsp;&nbsp;크기(WxHxD): {p['size_raw']}</div>
+      {sel_html}
       {bullets_html}
       {bars_html}
     </div>

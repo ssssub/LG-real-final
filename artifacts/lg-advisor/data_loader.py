@@ -39,9 +39,20 @@ def _split(val):
     return [t.strip() for t in re.split(r"[,/]", str(val)) if t.strip() and t.strip() != "X"]
 
 
+def _dedup(lst: list) -> list:
+    """순서를 유지하며 중복 제거."""
+    seen: set = set()
+    out = []
+    for v in lst:
+        if v not in seen:
+            seen.add(v)
+            out.append(v)
+    return out
+
+
 def _make_product(code, name, price_min, price_max, install, doors, total_l,
                   fridge_l, freezer_l, energy, width, size_raw, material,
-                  colors, feat_tokens, promo):
+                  colors, feat_tokens, promo, model_codes=None):
     energy_val = _to_int(energy)
     full_blob = " ".join(feat_tokens) + " " + name
     features = set()
@@ -52,6 +63,7 @@ def _make_product(code, name, price_min, price_max, install, doors, total_l,
             continue
         if any(kw in full_blob for kw in kws):
             features.add(key)
+    mat_list = _dedup(_split(material)) if material else ["-"]
     return {
         "code": code,
         "name": name,
@@ -66,7 +78,9 @@ def _make_product(code, name, price_min, price_max, install, doors, total_l,
         "width": _width(width),
         "size_raw": str(size_raw).strip() if size_raw else "-",
         "material": str(material).strip() if material else "-",
-        "colors": colors if isinstance(colors, list) else _split(colors),
+        "materials": mat_list,
+        "colors": _dedup(colors if isinstance(colors, list) else _split(colors)),
+        "model_codes": _dedup(model_codes) if model_codes else [code],
         "features": features,
         "is_ai": "ai" in features,
         "promo": promo if isinstance(promo, list) else [],
@@ -154,8 +168,14 @@ def load_products(path=None):
                 v = r.get(col)
                 if v is not None and pd.notna(v) and str(v).strip() not in ("X", ""):
                     promo.append(str(v).strip())
+            raw_colors   = _dedup(_split(r.get("색상", "")))
+            raw_mats     = _dedup(_split(r.get("도어 재질", "-"))) or ["-"]
+            raw_mcodes   = _dedup(_split(r.get("포함 제품 코드", "")))
+            rep_code     = str(r["대표 제품 코드"]).strip().strip("'")
+            if not raw_mcodes:
+                raw_mcodes = [rep_code]
             products.append({
-                "code": str(r["대표 제품 코드"]).strip().strip("'"),
+                "code": rep_code,
                 "name": name,
                 "price_min": _to_int(r.get("최저가")),
                 "price_max": _to_int(r.get("최고가")),
@@ -168,7 +188,9 @@ def load_products(path=None):
                 "width": _width(r.get("제품 크기 (WxHxD)")),
                 "size_raw": str(r.get("제품 크기 (WxHxD)", "-")).strip(),
                 "material": str(r.get("도어 재질", "-")).strip(),
-                "colors": _split(r.get("색상", "")),
+                "materials": raw_mats,
+                "colors": raw_colors,
+                "model_codes": raw_mcodes,
                 "features": features,
                 "is_ai": "ai" in features,
                 "promo": promo,
