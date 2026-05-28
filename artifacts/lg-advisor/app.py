@@ -399,15 +399,6 @@ ICON_JS = f"""
 
         const rawText = (btn.textContent || '').trim();
 
-        /* 히든 점프 버튼 (__jump_xxx__) — 부모 컨테이너 완전히 숨김 */
-        if (rawText.startsWith('__jump_')) {{
-          const wrap = btn.closest('[data-testid="stButton"]') || btn.parentElement;
-          if (wrap) wrap.style.cssText =
-            'position:absolute!important;width:0!important;height:0!important;'
-            + 'overflow:hidden!important;opacity:0!important;pointer-events:none!important;';
-          return;
-        }}
-
         /* 뒤로가기/이전/처음부터 텍스트 링크 스타일 */
         if (rawText.startsWith('←') || rawText.startsWith('↩')) {{
           btn.classList.add('lg-back-btn');
@@ -451,19 +442,6 @@ ICON_JS = f"""
         _paused = false;
       }});
 
-    /* 크럼 칩 클릭 → 대응하는 히든 점프 버튼 클릭 */
-    parentDoc.querySelectorAll('.lg-crumb[data-qid]').forEach(chip => {{
-      if (chip.dataset.crumbReady) return;
-      chip.dataset.crumbReady = '1';
-      chip.addEventListener('click', () => {{
-        const qid = chip.dataset.qid;
-        const target = '__jump_' + qid + '__';
-        const jumpBtn = Array.from(
-          parentDoc.querySelectorAll('button[data-testid="stBaseButton-secondary"]')
-        ).find(b => (b.textContent || '').trim() === target);
-        if (jumpBtn) jumpBtn.click();
-      }});
-    }});
   }}
 
   /* 페이지 로드 후 즉시 + 짧은 간격 반복 실행 (React 렌더 완료 후 확실히 반영) */
@@ -508,12 +486,6 @@ def render_header():
     </div>
     {crumbs_html}
     """, unsafe_allow_html=True)
-
-    # 숨겨진 점프 버튼 (JS가 크럼 클릭 시 자동으로 클릭 — enhance()가 화면에서 감춤)
-    for qid, _ in crumb_data:
-        if st.button(f"__jump_{qid}__", key=f"_jump_{qid}"):
-            jump_to(qid)
-            st.rerun()
 
 
 def q_bubble(text: str):
