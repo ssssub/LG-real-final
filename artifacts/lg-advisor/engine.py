@@ -121,25 +121,31 @@ def score_and_rank(candidates, ans):
 
 
 def next_question(products, ans):
+    # Q1: 설치형태 (전체 공통)
     if "install" not in ans:
         return "install"
-    cand, _ = filter_candidates(products, ans)
-    if len(cand) <= 1:
-        return "result"
 
+    # Q2: 인원 / 요리 (빌트인은 skip)
+    # Q2-1: 도어 방식 (프리스탠딩 800L+ 경로만 조건부)
+    # ※ cand <= 1 이어도 Q3(공통 필수)를 거쳐야 하므로 Q3 이전에는 early-exit 없음
+    cand, _ = filter_candidates(products, ans)
     if ans.get("install") != "빌트인":
         if "household" not in ans:
             return "household"
         if "cooking" not in ans:
             return "cooking"
         cand, _ = filter_candidates(products, ans)
-        if len(cand) <= 1:
-            return "result"
         if "door_style" not in ans and needs_door_style(cand, ans):
             return "door_style"
 
-    if "space" not in ans and needs_space(cand):
+    # Q3: 설치공간 크기 (전체 공통 — 무조건 표시)
+    if "space" not in ans:
         return "space"
+
+    # Q4: 추가기능 (전체 공통 — space 포함 최신 후보 기반 채점)
+    cand, _ = filter_candidates(products, ans)
+    if len(cand) <= 1:
+        return "result"
     if "wanted_features" not in ans and available_soft_features(cand):
         return "features"
     return "result"
