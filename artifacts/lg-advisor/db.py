@@ -82,7 +82,7 @@ _COL_LABELS = {
     "filter_efficiency":    "필터 효율",
     "discrimination_ratio": "판별 비율",
     "bits_resolved":        "해소 비트(bit)",
-    "satisfaction_score":   "만족도(★)",
+    "satisfaction_score":   "만족여부",
     "satisfaction_comment": "한줄 의견",
 }
 
@@ -201,8 +201,11 @@ def fetch_summary() -> dict:
         avg_bits   = c.execute("SELECT AVG(bits_resolved)      FROM sessions WHERE completed=1").fetchone()[0]
         avg_dwell  = c.execute("SELECT AVG(dwell_sec)          FROM sessions WHERE completed=1").fetchone()[0]
         avg_clicks = c.execute("SELECT AVG(click_count)        FROM sessions WHERE completed=1").fetchone()[0]
-        avg_sat    = c.execute("SELECT AVG(satisfaction_score) FROM sessions WHERE satisfaction_score IS NOT NULL").fetchone()[0]
-        sat_count  = c.execute("SELECT COUNT(*)                FROM sessions WHERE satisfaction_score IS NOT NULL").fetchone()[0]
+        sat_ok    = c.execute("SELECT COUNT(*) FROM sessions WHERE satisfaction_score=1").fetchone()[0]
+        sat_ng    = c.execute("SELECT COUNT(*) FROM sessions WHERE satisfaction_score=0").fetchone()[0]
+        sat_count = sat_ok + sat_ng
+
+    sat_rate = round(sat_ok / sat_count * 100, 1) if sat_count > 0 else None
 
     return {
         "total":                 total,
@@ -214,8 +217,10 @@ def fetch_summary() -> dict:
         "avg_bits_resolved":     round(avg_bits   or 0, 2),
         "avg_dwell_sec":         round(avg_dwell  or 0, 1),
         "avg_click_count":       round(avg_clicks or 0, 1),
-        "avg_satisfaction":      round(avg_sat, 2) if avg_sat is not None else None,
+        "sat_ok":                sat_ok,
+        "sat_ng":                sat_ng,
         "sat_count":             sat_count,
+        "sat_rate":              sat_rate,
     }
 
 

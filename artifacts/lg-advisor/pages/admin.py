@@ -65,16 +65,10 @@ labels  = db.col_labels()
 rows    = db.fetch_all()
 summary = db.fetch_summary()
 
-# ── 별점 표시 헬퍼 ────────────────────────────────────────────────────
-def _stars(score):
-    if score is None:
-        return "—"
-    full = int(round(score))
-    return "★" * full + "☆" * (5 - full) + f"  {score:.2f}"
-
 # ── KPI 박스 ─────────────────────────────────────────────────────────
-sat_display = _stars(summary["avg_satisfaction"]) if summary["avg_satisfaction"] else "—"
-bounce_color = "red" if summary["bounce_rate"] > 40 else "gray"
+sat_rate_display = f"{summary['sat_rate']}%" if summary['sat_rate'] is not None else "—"
+sat_rate_color   = "red" if (summary['sat_rate'] or 0) >= 50 else "gray"
+bounce_color     = "red" if summary["bounce_rate"] > 40 else "gray"
 
 st.markdown(f"""
 <div class="kpi-grid">
@@ -127,9 +121,9 @@ st.markdown(f"""
   </div>
 
   <div class="kpi accent">
-    <div class="kpi-num red" style="font-size:1.3rem;">{sat_display}</div>
-    <div class="kpi-label">탐색 만족도</div>
-    <div class="kpi-help">응답 {summary['sat_count']}건</div>
+    <div class="kpi-num {sat_rate_color}">{sat_rate_display}</div>
+    <div class="kpi-label">추천 만족율</div>
+    <div class="kpi-help">😊 {summary['sat_ok']} · 😞 {summary['sat_ng']} (총 {summary['sat_count']}건)</div>
   </div>
 
 </div>
@@ -233,9 +227,9 @@ else:
     if "1위 적합도(%)" in df_view.columns:
         df_view["1위 적합도(%)"] = df_view["1위 적합도(%)"].map(
             lambda x: f"{x:.1f}%" if x is not None else "")
-    if "만족도(★)" in df_view.columns:
-        df_view["만족도(★)"] = df_view["만족도(★)"].map(
-            lambda x: "★" * int(x) + "☆" * (5 - int(x)) if x is not None else "—")
+    if "만족여부" in df_view.columns:
+        df_view["만족여부"] = df_view["만족여부"].map(
+            lambda x: "😊 만족" if x == 1 else ("😞 불만족" if x == 0 else "—"))
 
     st.dataframe(df_view, use_container_width=True, height=500)
     st.caption(f"총 {len(df)}건 (완료 {summary['completed']}건 · 이탈 {summary['total']-summary['completed']}건) · session_id 열 제외 표시 (CSV에는 포함)")

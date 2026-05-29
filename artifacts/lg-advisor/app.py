@@ -1495,24 +1495,19 @@ elif q == "result":
               <div class="sat-sub">탐색 경험을 평가해 주시면 서비스 개선에 활용됩니다.</div>
             </div>
             """, unsafe_allow_html=True)
-            rating = st.feedback("stars", key="sat_feedback")
-            comment = st.text_input(
-                "한 줄 의견 (선택)",
-                placeholder="추천이 도움됐어요 / 원하는 제품이 없었어요 ...",
-                key="sat_comment",
-                label_visibility="collapsed",
-            )
-            if st.button("의견 제출", key="sat_submit", use_container_width=True):
-                if rating is not None:
-                    DB.log_satisfaction(
-                        st.session_state.session_id,
-                        score   = rating + 1,   # 0~4 → 1~5
-                        comment = comment or None,
-                    )
+            col_ok, col_ng = st.columns(2)
+            with col_ok:
+                if st.button("😊  만족", key="sat_ok",
+                             type="primary", use_container_width=True):
+                    DB.log_satisfaction(st.session_state.session_id, score=1)
                     st.session_state._rated = True
                     st.rerun()
-                else:
-                    st.warning("별점을 먼저 선택해주세요.")
+            with col_ng:
+                if st.button("😞  불만족", key="sat_ng",
+                             use_container_width=True):
+                    DB.log_satisfaction(st.session_state.session_id, score=0)
+                    st.session_state._rated = True
+                    st.rerun()
         else:
             st.markdown("""
             <div class="sat-thanks">소중한 의견 감사합니다! 서비스 개선에 꼭 반영할게요.</div>
